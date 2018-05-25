@@ -1203,6 +1203,7 @@ void zend_do_early_binding(void) /* {{{ */
 				break;
 			}
 		case ZEND_VERIFY_ABSTRACT_CLASS:
+		case ZEND_ADD_TYPE_PARAM:
 		case ZEND_ADD_INTERFACE:
 		case ZEND_ADD_TRAIT:
 		case ZEND_BIND_TRAITS:
@@ -2042,6 +2043,7 @@ static void zend_check_live_ranges(zend_op *opline) /* {{{ */
 		} else if (opline->opcode == ZEND_INIT_STATIC_METHOD_CALL ||
 		           opline->opcode == ZEND_NEW ||
 		           opline->opcode == ZEND_FETCH_CLASS_CONSTANT ||
+				   opline->opcode == ZEND_ADD_TYPE_PARAM ||
 		           opline->opcode == ZEND_ADD_INTERFACE ||
 		           opline->opcode == ZEND_ADD_TRAIT ||
 		           opline->opcode == ZEND_BIND_TRAITS ||
@@ -6234,6 +6236,23 @@ void zend_compile_use_trait(zend_ast *ast) /* {{{ */
 }
 /* }}} */
 
+void zend_compile_type_parameters(znode *class_node, zend_ast *ast) /* {{{ */
+{
+	zend_ast_list *list = zend_ast_get_list(ast);
+	uint32_t i;
+	for (i = 0; i < list->children; ++i) {
+		zend_ast *type_parameter_ast = list->child[i];
+		zend_string *type_alias = zend_ast_get_str(type_parameter_ast);
+
+		zend_op *opline;
+
+		opline = zend_emit_op(NULL, ZEND_ADD_TYPE_PARAM, class_node, NULL);
+		opline->op2_type = IS_CONST;
+		opline->op2.constant = zend_add_class_name_literal(CG(active_op_array), type_alias);
+	}
+}
+/* }}} */
+
 void zend_compile_implements(znode *class_node, zend_ast *ast) /* {{{ */
 {
 	zend_ast_list *list = zend_ast_get_list(ast);
@@ -6280,6 +6299,7 @@ void zend_compile_class_decl(zend_ast *ast) /* {{{ */
 	zend_ast *extends_ast = decl->child[0];
 	zend_ast *implements_ast = decl->child[1];
 	zend_ast *stmt_ast = decl->child[2];
+	zend_ast *type_parameters_ast = decl->child[4];
 	zend_string *name, *lcname;
 	zend_class_entry *ce = zend_arena_alloc(&CG(arena), sizeof(zend_class_entry));
 	zend_op *opline;
@@ -6443,6 +6463,10 @@ void zend_compile_class_decl(zend_ast *ast) /* {{{ */
 		ce->ce_flags |= ZEND_ACC_IMPLEMENT_TRAITS;
 
 		zend_emit_op(NULL, ZEND_BIND_TRAITS, &declare_node, NULL);
+	}
+
+	if (type_parameters_ast) {
+		zend_compile_type_parameters(&declare_node, type_parameters_ast);
 	}
 
 	if (implements_ast) {

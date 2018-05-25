@@ -106,7 +106,8 @@ ZEND_API zend_ast * ZEND_FASTCALL zend_ast_create_constant(zend_string *name, ze
 
 ZEND_API zend_ast *zend_ast_create_decl(
 	zend_ast_kind kind, uint32_t flags, uint32_t start_lineno, zend_string *doc_comment,
-	zend_string *name, zend_ast *child0, zend_ast *child1, zend_ast *child2, zend_ast *child3
+	zend_string *name, zend_ast *child0, zend_ast *child1, zend_ast *child2, zend_ast *child3,
+	zend_ast *child4
 ) {
 	zend_ast_decl *ast;
 
@@ -123,6 +124,7 @@ ZEND_API zend_ast *zend_ast_create_decl(
 	ast->child[1] = child1;
 	ast->child[2] = child2;
 	ast->child[3] = child3;
+	ast->child[4] = child4;
 
 	return (zend_ast *) ast;
 }
@@ -1385,6 +1387,7 @@ tail_call:
 		case ZEND_AST_ARG_LIST:
 		case ZEND_AST_EXPR_LIST:
 		case ZEND_AST_PARAM_LIST:
+		case ZEND_AST_TYPE_PARAM_LIST:
 simple_list:
 			zend_ast_export_list(str, (zend_ast_list*)ast, 1, 20, indent);
 			break;
