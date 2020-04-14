@@ -249,7 +249,9 @@ static void do_adjust_relative(timelib_time* time)
 
 		time->s += time->relative.s;
 		time->i += time->relative.i;
+        printf("\nhour %lld \n", time->h);
 		time->h += time->relative.h;
+		printf("\nrelative hour %lld \n", time->relative.h);
 
 		time->d += time->relative.d;
 		time->m += time->relative.m;
@@ -448,13 +450,41 @@ static timelib_sll do_adjust_timezone(timelib_time *tz, timelib_tzinfo *tzi)
 
 				tz->is_localtime = 1;
 				before = timelib_get_time_zone_info(tz->sse, tzi);
-				after = timelib_get_time_zone_info(tz->sse - before->offset, tzi);
+                after = timelib_get_time_zone_info(tz->sse - before->offset, tzi);
+//				after = timelib_get_time_zone_info(tz->sse + abs(before->offset), tzi);
+//				printf("\nsse %lld \n", tz->sse);
+				if (after->transition_time < before->transition_time) {
+//				    tz->sse += 3600;
+//				    tz->z += 3600;
+                    printf("\nswitch\n");
+//				    timelib_time_offset *temp;
+//				    temp = timelib_get_time_zone_info(tz->sse - (before->offset - 3600), tzi);
+                    before = timelib_get_time_zone_info(tz->sse - (before->offset), tzi);
+                    after = timelib_get_time_zone_info(tz->sse - (before->offset), tzi);
+//                    *after = *before;
+//				    before = temp;
+				}
+//                    printf("\nswitch \n");
+//                    *before = *after;
+//                    *after = temp;
+//				}
+
 				timelib_set_timezone(tz, tzi);
+                printf("\nsse %lld \n", tz->sse);
+				printf("\nbefore trans %lld \n", before->transition_time);
+                printf("after trans %lld \n", after->transition_time);
+                printf("\nbefore offset %d \n", before->offset);
+                printf("\nafter offset %d \n", after->offset);
 
 				in_transition = (
 					((tz->sse - after->offset) >= (after->transition_time + (before->offset - after->offset))) &&
 					((tz->sse - after->offset) < after->transition_time)
 				);
+
+				if (in_transition) {
+                    printf("\nin trans \n");
+				    tz->trans_adjust = 1;
+                }
 
 				if ((before->offset != after->offset) && !in_transition) {
 					tmp = -after->offset;
@@ -496,6 +526,7 @@ void timelib_update_ts(timelib_time* time, timelib_tzinfo* tzi)
 	res += do_time(time->h, time->i, time->s);
 	time->sse = res;
 
+	printf("\ninitial sse %lld\n", res);
 	res += do_adjust_timezone(time, tzi);
 	time->sse = res;
 

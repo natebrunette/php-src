@@ -601,13 +601,16 @@ static ttinfo* fetch_timezone_offset(timelib_tzinfo *tz, timelib_sll ts, timelib
 {
 	uint32_t i;
 
+//	printf("\nfetch offset ts %lld\n", ts);
 	/* If there is no transition time, we pick the first one, if that doesn't
 	 * exist we return NULL */
 	if (!tz->bit64.timecnt || !tz->trans) {
 		if (tz->bit64.typecnt == 1) {
 			*transition_time = INT64_MIN;
+//			printf("\ndidn't find transition\n");
 			return &(tz->type[0]);
 		}
+//		printf("\ndidn't find transition\n");
 		return NULL;
 	}
 
@@ -617,6 +620,7 @@ static ttinfo* fetch_timezone_offset(timelib_tzinfo *tz, timelib_sll ts, timelib
 	 * with this idea in the first though :) */
 	if (ts < tz->trans[0]) {
 		*transition_time = INT64_MIN;
+//		printf("\ndidn't find transition\n");
 		return &(tz->type[0]);
 	}
 
@@ -624,10 +628,18 @@ static ttinfo* fetch_timezone_offset(timelib_tzinfo *tz, timelib_sll ts, timelib
 	 * the correct entry */
 	for (i = 0; i < tz->bit64.timecnt; i++) {
 		if (ts < tz->trans[i]) {
+//			if (ts - (&(tz->type[tz->trans_idx[i - 1]]))->offset < tz->trans[i - 1]) {
+//				*transition_time = tz->trans[i - 2];
+//				return &(tz->type[tz->trans_idx[i - 2]]);
+//			}
+
 			*transition_time = tz->trans[i - 1];
+//			printf("\ntransition time check %lld \n", tz->trans[i]);
+//			printf("\nfound transition %lld\n", tz->trans[i - 1]);
 			return &(tz->type[tz->trans_idx[i - 1]]);
 		}
 	}
+//	printf("\nfound transition end %lld\n", tz->trans[tz->bit64.timecnt - 1]);
 	*transition_time = tz->trans[tz->bit64.timecnt - 1];
 	return &(tz->type[tz->trans_idx[tz->bit64.timecnt - 1]]);
 }

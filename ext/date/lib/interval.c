@@ -122,12 +122,11 @@ timelib_time *timelib_add(timelib_time *old_time, timelib_rel_time *interval)
 
 	timelib_update_ts(t, NULL);
 
-//	printf("%lld %lld %d\n", old_time->dst, t->dst, (t->sse - old_time->sse));
-	/* Adjust for backwards DST changeover */
-	if (old_time->dst == 1 && t->dst == 0 && !interval->y && !interval->m && !interval->d) {
-		t->sse -= old_time->z;
-		t->sse += t->z;
-	}
+    /* Adjust for DST changeover */
+    if (t->trans_adjust != 1 && old_time->dst != t->dst && !interval->y && !interval->m && !interval->d) {
+        t->sse -= old_time->z;
+        t->sse += t->z;
+    }
 
 	timelib_update_from_sse(t);
 	t->have_relative = 0;
@@ -157,16 +156,16 @@ timelib_time *timelib_sub(timelib_time *old_time, timelib_rel_time *interval)
 
 	timelib_update_ts(t, NULL);
 
-	/* Adjust for backwards DST changeover */
-	if (old_time->dst == 1 && t->dst == 0 && !interval->y && !interval->m && !interval->d) {
+	/* Adjust for DST changeover */
+	if (t->trans_adjust != 1 && old_time->dst != t->dst && !interval->y && !interval->m && !interval->d) {
 		t->sse -= old_time->z;
 		t->sse += t->z;
 	}
-	/* Adjust for forwards DST changeover */
-	if (old_time->dst == 0 && t->dst == 1 && !interval->y && !interval->m && !interval->d ) {
-		t->sse -= old_time->z;
-		t->sse += t->z;
-	}
+
+    // subtract an extra hour if we subtracted into a jump forward
+    if (old_time->dst == 1 && t->trans_adjust == 1) {
+        t->sse += t->z - old_time->z - 3600;
+    }
 
 	timelib_update_from_sse(t);
 

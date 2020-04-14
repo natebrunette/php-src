@@ -220,6 +220,7 @@ typedef struct _timelib_time {
 	unsigned int   sse_uptodate; /* !0 if the sse member is up to date with the date/time members */
 	unsigned int   tim_uptodate; /* !0 if the date/time members are up to date with the sse member */
 	unsigned int   is_localtime; /*  1 if the current struct represents localtime, 0 if it is in GMT */
+    unsigned int   trans_adjust; /*  1 if the current struct was adjusted during a transition period */
 	unsigned int   zone_type;    /*  1 time offset,
 	                              *  3 TimeZone identifier,
 	                              *  2 TimeZone abbreviation */

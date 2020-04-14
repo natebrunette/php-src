@@ -2933,6 +2933,9 @@ static int php_date_modify(zval *object, char *modify, size_t modify_len) /* {{{
 		return 0;
 	}
 
+    timelib_sll original_offset = dateobj->time->z;
+    signed int was_dst = dateobj->time->dst;
+
 	tmp_time = timelib_strtotime(modify, modify_len, &err, DATE_TIMEZONEDB, php_date_parse_tzfile_wrapper);
 
 	/* update last errors and warnings */
@@ -2981,6 +2984,38 @@ static int php_date_modify(zval *object, char *modify, size_t modify_len) /* {{{
 	timelib_time_dtor(tmp_time);
 
 	timelib_update_ts(dateobj->time, NULL);
+    unsigned int relative_short_time = dateobj->time->relative.h != 0
+            || dateobj->time->relative.m != 0
+            || dateobj->time->relative.s != 0
+            || dateobj->time->relative.us != 0;
+
+    unsigned int is_subtracting_relative_short = dateobj->time->relative.h < 0
+            || dateobj->time->relative.m < 0
+            || dateobj->time->relative.s < 0
+            || dateobj->time->relative.us < 0;
+
+    /*
+     * If dst changed, handle dst jump
+     *
+     * 1. Using timezone id type
+     * 2. Using relative time period shorter than a day
+     * 3. Not during a transitional period
+     */
+    if (
+            was_dst != dateobj->time->dst
+            && dateobj->time->zone_type == TIMELIB_ZONETYPE_ID
+            && relative_short_time == 1
+            && dateobj->time->trans_adjust != 1
+    ) {
+        // add the difference between the offsets
+        dateobj->time->sse += dateobj->time->z - original_offset;
+    }
+
+    // subtract an extra hour if we subtracted into a jump forward
+    if (was_dst == 1 && dateobj->time->trans_adjust == 1 && is_subtracting_relative_short == 1) {
+        dateobj->time->sse += dateobj->time->z - original_offset - 3600;
+    }
+
 	timelib_update_from_sse(dateobj->time);
 	dateobj->time->have_relative = 0;
 	memset(&dateobj->time->relative, 0, sizeof(dateobj->time->relative));
